@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func fetch(url string) string {
 	return string(body)
 }
 
-func parseUrls(url string, ch chan bool) {
+func parseUrls(url string) {
 	body := fetch(url)
 	body = strings.Replace(body, "\n", "", -1)
 	rp := regexp.MustCompile(`<div class="hd">(.*?)</div>`)
@@ -45,19 +46,21 @@ func parseUrls(url string, ch chan bool) {
 			titleRe.FindStringSubmatch(item[1])[1])
 	}
 	time.Sleep(2 * time.Second)
-	ch <- true
 }
 
 func main() {
 	start := time.Now()
-	ch := make(chan bool)
+	var wg sync.WaitGroup
+	wg.Add(10)
+
 	for i := 0; i < 10; i++ {
-		go parseUrls("https://movie.douban.com/top250?start="+strconv.Itoa(25*i), ch)
+		go func() {
+			defer wg.Done()
+			parseUrls("https://movie.douban.com/top250?start=" + strconv.Itoa(25*i))
+		}()
 	}
 
-	for i := 1; i < 10; i++ {
-		<-ch
-	}
+	wg.Wait()
 
 	elapsed := time.Since(start)
 	fmt.Printf("Took %s", elapsed)

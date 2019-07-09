@@ -2,48 +2,41 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
-func fetch(url string) string {
+func fetch(url string) *goquery.Document {
 	fmt.Println("Fetch Url", url)
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)")
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Http get err:", err)
-		return ""
+		log.Fatal("Http get err:", err)
 	}
 	if resp.StatusCode != 200 {
-		fmt.Println("Http status code:", resp.StatusCode)
-		return ""
+		log.Fatal("Http status code:", resp.StatusCode)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		fmt.Println("Read error", err)
-		return ""
+		log.Fatal(err)
 	}
-	return string(body)
+	return doc
 }
 
 func parseUrls(url string, ch chan bool) {
-	body := fetch(url)
-	body = strings.Replace(body, "\n", "", -1)
-	rp := regexp.MustCompile(`<div class="hd">(.*?)</div>`)
-	titleRe := regexp.MustCompile(`<span class="title">(.*?)</span>`)
-	idRe := regexp.MustCompile(`<a href="https://movie.douban.com/subject/(\d+)/"`)
-	items := rp.FindAllStringSubmatch(body, -1)
-	for _, item := range items {
-		fmt.Println(idRe.FindStringSubmatch(item[1])[1],
-			titleRe.FindStringSubmatch(item[1])[1])
-	}
+	doc := fetch(url)
+	doc.Find("ol.grid_view li").Find(".hd").Each(func(index int, ele *goquery.Selection) {
+		movieUrl, _ := ele.Find("a").Attr("href")
+		fmt.Println(strings.Split(movieUrl, "/")[4], ele.Find(".title").Eq(0).Text())
+	})
 	time.Sleep(2 * time.Second)
 	ch <- true
 }
