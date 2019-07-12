@@ -54,10 +54,10 @@ func main() {
 	wg.Add(10)
 
 	for i := 0; i < 10; i++ {
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 			parseUrls("https://movie.douban.com/top250?start=" + strconv.Itoa(25*i))
-		}()
+		}(i)
 	}
 
 	wg.Wait()
