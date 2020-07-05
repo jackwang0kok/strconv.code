@@ -7,12 +7,13 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic"
 )
 
 const mapping = `
 {
 	"mappings": {
+		"online": {
 		"properties": {
 			"id": {
 				"type": "long"
@@ -23,13 +24,14 @@ const mapping = `
 			"genres": {
 				"type": "keyword"
 			}
-		}
+		}}
 	}
 }`
 
 var (
 	subject   Subject
 	indexName = "subject"
+	typeName = "online"
 	servers   = []string{"http://localhost:9200/"}
 )
 
@@ -45,6 +47,7 @@ func Search(client *elastic.Client, ctx context.Context, genre string) {
 	termQuery := elastic.NewTermQuery("genres", genre)
 	searchResult, err := client.Search().
 		Index(indexName).
+		Type(typeName).
 		Query(termQuery).
 		Sort("id", true). // 按id升序排序
 		From(0).Size(10). // 拿前10个结果
@@ -95,6 +98,7 @@ func main() {
 	// 写入
 	doc, err := client.Index().
 		Index(indexName).
+		Type(typeName).
 		Id(strconv.Itoa(subject.ID)).
 		BodyJson(subject).
 		Refresh("wait_for").
@@ -112,6 +116,7 @@ func main() {
 	fmt.Println(string(subject.ID))
 	doc, err = client.Index().
 		Index(indexName).
+		Type(typeName).
 		Id(strconv.Itoa(subject.ID)).
 		BodyJson(subject).
 		Refresh("wait_for").
@@ -124,6 +129,7 @@ func main() {
 	// 获取
 	result, err := client.Get().
 		Index(indexName).
+		Type(typeName).
 		Id(strconv.Itoa(subject.ID)).
 		Do(ctx)
 	if err != nil {
@@ -132,7 +138,7 @@ func main() {
 	if result.Found {
 		fmt.Printf("Got document %v (version=%d, index=%s, type=%s)\n",
 			result.Id, result.Version, result.Index, result.Type)
-		err := json.Unmarshal(result.Source, &subject)
+		err := json.Unmarshal(*result.Source, &subject)
 		if err != nil {
 			panic(err)
 		}
@@ -147,6 +153,7 @@ func main() {
 	// 删除
 	res, err := client.Delete().
 		Index(indexName).
+		Type(typeName).
 		Id("1").
 		Refresh("wait_for").
 		Do(ctx)
