@@ -22,3 +22,29 @@ Delivered message to topic strconv [0] at offset 0
 ```
 Created Producer rdkafka#producer-1
 Delivered message to topic strconv [0] at offset 1
+
+
+# 终端1
+```
+❯ go run confluent_consumer.go localhost:9092 1 strconv
+```
+Created Consumer rdkafka#consumer-1
+% Message on strconv[0]@0:
+Hello Go!
+% Headers: [myTestHeader="header values are binary"]
+% Message on strconv[0]@1:
+Hello Go!
+% Headers: [myTestHeader="header values are binary"]
+Ignored OffsetsCommitted (<nil>, [strconv[0]@2])
+# 终端2
+```
+❯ go run confluent_consumer.go localhost:9092 2 strconv
+```
+Created Consumer rdkafka#consumer-1
+% Message on strconv[0]@0:
+Hello Go!
+% Headers: [myTestHeader="header values are binary"]
+% Message on strconv[0]@1:
+Hello Go!
+% Headers: [myTestHeader="header values are binary"]
+Ignored OffsetsCommitted (<nil>, [strconv[0]@2])
